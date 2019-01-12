@@ -948,18 +948,38 @@ that is itself a series, and possibly upcast the result to a DataFrame:
 
 .. warning::
 
-    In the current implementation apply calls func twice on the
-    first group to decide whether it can take a fast or slow code
-    path. This can lead to unexpected behavior if func has
-    side-effects, as they will take effect twice for the first
-    group.
+    The current implementation uses a cythonized code path which requires
+    that the input data is not modified inplace. The heuristic assumes that
+    this might be happening if ``func(group) is group`` in which case we fall
+    back to a slow code path which evaluates func on the first group a second
+    time.
+    This can lead to unexpected behavior if func has side-effects,
+    as they will take effect twice for the first group.
+    This behavior is 
 
     .. ipython:: python
 
         d = pd.DataFrame({"a": ["x", "y"], "b": [1, 2]})
-        def identity(df):
-            print(df)
-            return df
+
+        def func_fast_apply(group):
+            """
+            This func doesn't modify inplace and returns
+            a scalar which is safe to fast apply
+            """
+            print(group.name)
+            return len(group)
+
+        d.groupby("a").apply(func_fast_apply)
+
+        def identity(group):
+            """
+            This triggers the slow path because ``identity(group) is group``
+            If there is no inplace modification happening
+            this may be avoided by returning a shallow copy
+            i.e. return group.copy()
+            """
+            print(group.name)
+            return group
 
         d.groupby("a").apply(identity)
 

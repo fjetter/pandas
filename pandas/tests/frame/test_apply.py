@@ -568,6 +568,39 @@ class TestDataFrameApply():
 
         tm.assert_frame_equal(result, expected)
 
+    @pytest.mark.parametrize("axis, expected", [
+        (0, ['a', 'b']),
+        (1, [0, 1, 2, 3, 4, 5]),
+    ])
+    def test_apply_first_row_once(self, axis, expected):
+        # GH24748 ,GH2936, GH2656, GH7739, GH10519, GH12155, GH20084, GH21417
+        df = pd.DataFrame({'a': [0, 0, 1, 1, 2, 2], 'b': np.arange(6)})
+
+        rows = []
+
+        def f_fast(row):
+            import ipdb; ipdb.set_trace()
+            rows.append(row.name)
+            return 0
+        df.apply(f_fast, axis=axis)
+
+        # every row should appear once, i.e. apply is called once per row
+        assert rows == expected
+
+        rows_slow = []
+
+        def f_slow(row):
+            """
+            This function triggers a `function does not reduce`
+            exception and uses the slow path
+            """
+            rows_slow.append(row.name)
+            return row.copy()
+
+        df.apply(f_slow, axis=axis)
+        expected_first_row_twice = [expected[0]] + expected
+        assert rows_slow == expected_first_row_twice
+
 
 class TestInferOutputShape(object):
     # the user has supplied an opaque UDF where

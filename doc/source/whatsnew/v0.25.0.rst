@@ -26,6 +26,70 @@ Other Enhancements
 Backwards incompatible API changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Fast GroupBy.apply on ``DataFrame`` evaluates first group only once
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+(:issue:`2936`, :issue:`2656`, :issue:`7739`, :issue:`10519`, :issue:`12155`,
+:issue:`20084`, :issue:`21417`)
+
+The implementation of ``DataFrame.groupby.apply`` previously evaluated func
+consistently twice on the first group to infer if it is safe to use a fast
+code path. Particularly for functions with side effects, this was an undesired
+behavior and may have led to surprises.
+
+The new behavior is that the first group is no longer evaluated twice if the
+fast path can be used.
+
+Previous behavior:
+
+.. code-block:: ipython
+
+    In [2]: df = pd.DataFrame({"a": ["x", "y"], "b": [1, 2]})
+
+    In [3]: side_effects = []
+
+    In [4]: def func_fast_apply(group):
+    ...:     side_effects.append(group.name)
+    ...:     return len(group)
+    ...:
+
+    In [5]: df.groupby("a").apply(func_fast_apply)
+
+    In [6]: assert side_effects == ["x", "x", "y"]
+
+New behavior:
+
+.. ipython:: python
+
+    df = pd.DataFrame({"a": ["x", "y"], "b": [1, 2]})
+
+    side_effects = []
+    def func_fast_apply(group):
+        """
+        This func doesn't modify inplace and returns
+        a scalar which is safe to fast apply
+        """
+        side_effects.append(group.name)
+        return len(group)
+
+    df.groupby("a").apply(func_fast_apply)
+    side_effects
+
+    side_effects.clear()
+    def identity(group):
+        """
+        This triggers the slow path because ``identity(group) is group``
+        If there is no inplace modification happening
+        this may be avoided by returning a shallow copy
+        i.e. return group.copy()
+        """
+        side_effects.append(group.name)
+        return group
+
+    df.groupby("a").apply(identity)
+    side_effects
+
+
 .. _whatsnew_0250.api.other:
 
 Other API Changes
