@@ -1395,10 +1395,46 @@ def test_group_name_available_in_inference_pass():
         return group.copy()
 
     df.groupby('a', sort=False, group_keys=False).apply(f)
-    # we expect 2 zeros because we call ``f`` once to see if a faster route
-    # can be used.
+    # gh-2936
+    # every group should appear once, i.e. apply is called once per group
     expected_names = [0, 1, 2]
     assert names == expected_names
+
+    names_slow = []
+
+    def g(group):
+        names_slow.append(group.name)
+        return group
+
+    df.groupby('a', sort=False, group_keys=False).apply(g)
+    assert names_slow == [0, 0, 1, 2]
+    names.clear()
+    assert names == []
+    df.apply(f, axis=1)
+    assert names == [0, 1, 2, 3, 4, 5]
+
+    names_slow.clear()
+    assert names_slow == []
+    df.apply(g, axis=1)
+    assert names == [0, 1, 2, 3, 4, 5]
+
+    def f(group):
+        import copy
+        names.append(group)
+        return copy.copy(group)
+
+    def g(group):
+        names_slow.append(group)
+        return group
+    names.clear()
+    assert names == []
+    df['a'].apply(f)
+    assert names == [0, 0, 1, 1, 2, 2]
+
+    names_slow.clear()
+    assert names_slow == []
+    df['a'].apply(g)
+    assert names == [0, 0, 1, 1, 2, 2]
 
 
 def test_no_dummy_key_names(df):

@@ -36,10 +36,10 @@ cdef class Reducer:
     """
     cdef:
         Py_ssize_t increment, chunksize, nresults
-        object arr, dummy, f, labels, typ, ityp, index
+        object arr, dummy, f, labels, typ, ityp, index, out
 
     def __init__(self, object arr, object f, axis=1, dummy=None,
-                 labels=None):
+                 labels=None, out=None):
         n, k = arr.shape
 
         if axis == 0:
@@ -62,6 +62,7 @@ cdef class Reducer:
         self.labels = labels
         self.dummy, self.typ, self.index, self.ityp = self._check_dummy(
             dummy=dummy)
+        self.out = out
 
     def _check_dummy(self, dummy=None):
         cdef object index=None, typ=None, ityp=None
@@ -150,9 +151,10 @@ cdef class Reducer:
                 if hasattr(res, 'values') and util.is_array(res.values):
                     res = res.values
                 if i == 0:
+                    self.out[i] = res
                     result = _get_result_array(res,
-                                               self.nresults,
-                                               len(self.dummy))
+                                            self.nresults,
+                                            len(self.dummy))
                     it = <flatiter>PyArray_IterNew(result)
 
                 PyArray_SETITEM(result, PyArray_ITER_DATA(it), res)
@@ -616,7 +618,7 @@ cdef class BlockSlider:
             arr.shape[1] = 0
 
 
-def reduce(arr, f, axis=0, dummy=None, labels=None):
+def reduce(arr, f, axis=0, dummy=None, labels=None, out=None):
     """
 
     Parameters
@@ -636,5 +638,5 @@ def reduce(arr, f, axis=0, dummy=None, labels=None):
         if hasattr(labels, 'values'):
             labels = labels.values
 
-    reducer = Reducer(arr, f, axis=axis, dummy=dummy, labels=labels)
+    reducer = Reducer(arr, f, axis=axis, dummy=dummy, labels=labels, out=out)
     return reducer.get_result()

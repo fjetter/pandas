@@ -233,6 +233,7 @@ class FrameApply(object):
 
         # we cannot reduce using non-numpy dtypes,
         # as demonstrated in gh-12244
+        self.results = {}
         if (self.result_type in ['reduce', None] and
                 not self.dtypes.apply(is_extension_type).any()):
 
@@ -248,7 +249,8 @@ class FrameApply(object):
                 result = reduction.reduce(values, self.f,
                                           axis=self.axis,
                                           dummy=dummy,
-                                          labels=labels)
+                                          labels=labels,
+                                          out=self.results)
                 return self.obj._constructor_sliced(result, index=labels)
             except Exception:
                 pass
@@ -265,13 +267,20 @@ class FrameApply(object):
 
         i = None
         keys = []
-        results = {}
+
+        def calc_result(ix, v):
+            if i not in self.results:
+                self.results[i] = self.f(v)
+            else:
+                self.results[i] = self.obj._constructor_sliced(self.results[i],
+                                                               index=v.index)
+            keys.append(v.name)
+
         if self.ignore_failures:
             successes = []
             for i, v in enumerate(series_gen):
                 try:
-                    results[i] = self.f(v)
-                    keys.append(v.name)
+                    calc_result(i, v)
                     successes.append(i)
                 except Exception:
                     pass
@@ -283,8 +292,7 @@ class FrameApply(object):
         else:
             try:
                 for i, v in enumerate(series_gen):
-                    results[i] = self.f(v)
-                    keys.append(v.name)
+                    calc_result(i, v)
             except Exception as e:
                 if hasattr(e, 'args'):
 
@@ -295,7 +303,6 @@ class FrameApply(object):
                                            pprint_thing(k), )
                 raise
 
-        self.results = results
         self.res_index = res_index
         self.res_columns = self.result_columns
 

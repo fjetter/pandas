@@ -568,6 +568,30 @@ class TestDataFrameApply():
 
         tm.assert_frame_equal(result, expected)
 
+    def test_apply_first_row_once(self):
+        df = pd.DataFrame({'a': [0, 0, 1, 1, 2, 2], 'b': np.arange(6)})
+
+        names = []
+
+        def f(group):
+            names.append(group.name)
+            return group.copy()
+
+        df.apply(f)
+        # gh-2936
+        # every group should appear once, i.e. apply is called once per group
+        expected_names = [0, 1, 2]
+        assert names == expected_names
+
+        names_slow = []
+
+        def g(group):
+            names_slow.append(group.name)
+            return group
+
+        df.apply(g)
+        assert names_slow == [0, 0, 1, 2]
+
 
 class TestInferOutputShape(object):
     # the user has supplied an opaque UDF where

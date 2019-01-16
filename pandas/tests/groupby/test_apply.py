@@ -105,6 +105,67 @@ def test_fast_apply():
     assert not mutated
 
 
+def test_group_apply_once_per_group():
+    df = pd.DataFrame({'a': [0, 0, 1, 1, 2, 2], 'b': np.arange(6)})
+
+    names = []
+
+    def f_copy(group):
+        names.append(group.name)
+        return group.copy()
+    df.groupby("a").apply(f_copy)
+    assert names == [0, 1, 2]
+
+    def f_nocopy(group):
+        names.append(group.name)
+        return group
+    names.clear()
+    # this takes the slow apply path, i.e. we need to apply the function to the first row twice
+    df.groupby("a").apply(f_copy)
+    assert names == [0, 0, 1, 2]
+
+
+# from pandas._libs import reduction
+# # test_cython_transform_frame
+
+
+# def test_slow_apply():
+#     strings = list('qwertyuiopasdfghjklz')
+#     df = DataFrame({
+#         'int': [1, 1, 1, 1, 2] * 200,
+#         'string': strings * 50,
+#     }, index=pd.MultiIndex.from_product([range(100), range(10)]))
+
+#     def f(g):
+#         return g.sum()
+
+#     g = df.groupby("string")
+
+#     grouper = g.grouper
+#     splitter = grouper._get_splitter(g._selected_obj, axis=g.axis)
+#     group_keys = grouper._get_group_keys()
+#     with pytest.raises(reduction.InvalidApply, match="Cannot modify frame index internals"):
+#         splitter.fast_apply(f, group_keys)
+
+# def test_slow_apply_another_ex():
+#     strings = list('qwertyuiopasdfghjklz')
+#     df = DataFrame({
+#         'int': [1, 1, 1, 1, 2] * 200,
+#         'value': list("abcde") * 200,
+#         'string': strings * 50,
+#     })
+
+#     def f(g):
+#         return g
+
+#     g = df.groupby("string")
+
+#     grouper = g.grouper
+#     splitter = grouper._get_splitter(g._selected_obj, axis=g.axis)
+#     group_keys = grouper._get_group_keys()
+#     with pytest.raises(reduction.InvalidApply, match="Cannot modify frame index internals"):
+#         splitter.fast_apply(f, group_keys)
+
 def test_apply_with_mixed_dtype():
     # GH3480, apply with mixed dtype on axis=1 breaks in 0.11
     df = DataFrame({'foo1': np.random.randn(6),
