@@ -107,20 +107,22 @@ def test_fast_apply():
 
 
 def test_group_apply_once_per_group():
-    # GH24748 ,GH2936, GH2656, GH7739, GH10519, GH12155, GH20084, GH21417
-    df = pd.DataFrame({'a': [0, 0, 1, 1, 2, 2], 'b': np.arange(6)})
+    # GH2936, GH7739, GH10519, GH2656, GH12155, GH20084, GH21417
+    df = pd.DataFrame({"a": [0, 0, 1, 1, 2, 2], "b": np.arange(6)})
 
     names = []
 
     def f_copy(group):
         names.append(group.name)
         return group.copy()
+
     df.groupby("a").apply(f_copy)
     assert names == [0, 1, 2]
 
     def f_nocopy(group):
         names.append(group.name)
         return group
+
     names = []
     # this takes the slow apply path
     df.groupby("a").apply(f_nocopy)
