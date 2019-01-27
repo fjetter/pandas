@@ -7,12 +7,14 @@ from itertools import chain
 import numpy as np
 import pytest
 
-import pandas as pd
-import pandas as pd
-import pandas.util.testing as tm
-from pandas import DataFrame, Index, Series, isna
 import pandas.compat as compat
+from pandas.compat import lrange
+
+import pandas as pd
+from pandas import DataFrame, Index, Series, isna
 from pandas.conftest import _get_cython_table_params
+import pandas.util.testing as tm
+from pandas.util.testing import assert_frame_equal, assert_series_equal
 
 
 class TestSeriesApply():
@@ -663,27 +665,3 @@ class TestSeriesMap():
         result = s.map(mapping)
 
         tm.assert_series_equal(result, pd.Series(exp))
-
-    def test_apply_only_once(self):
-        # GH24748 ,GH2936, GH2656, GH7739, GH10519, GH12155, GH20084, GH21417
-        ser = pd.Series([0, 0, 1, 1, 2, 2], name="series")
-        rows = []
-
-        def f(row):
-            rows.append(row)
-            return row
-        ser.apply(f)
-        # every row should appear once, i.e. apply is called once per row
-        expected_names = [0, 0, 1, 1, 2, 2]
-        assert rows == expected_names
-
-        # Rows should also only be applied once if the return
-        # shape is different
-        rows = []
-
-        def g(row):
-            rows.append(row)
-            return (row, row)
-        ser.apply(g)
-        expected_names = [0, 0, 1, 1, 2, 2]
-        assert rows == expected_names

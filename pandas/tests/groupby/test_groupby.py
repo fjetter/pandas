@@ -1442,7 +1442,7 @@ def test_group_name_available_in_inference_pass():
         return group
 
     df.groupby('a', sort=False, group_keys=False).apply(f_slow)
-    assert names_slow == [0, 0, 1, 2]
+    assert names_slow == [0, 1, 2]
 
 
 def test_no_dummy_key_names(df):

@@ -579,7 +579,6 @@ class TestDataFrameApply():
         rows = []
 
         def f_fast(row):
-            import ipdb; ipdb.set_trace()
             rows.append(row.name)
             return 0
         df.apply(f_fast, axis=axis)

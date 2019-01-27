@@ -101,7 +101,8 @@ def test_fast_apply():
     splitter = grouper._get_splitter(g._selected_obj, axis=g.axis)
     group_keys = grouper._get_group_keys()
 
-    values, mutated = splitter.fast_apply(f, group_keys)
+    values, mutated, status = splitter.fast_apply(f, group_keys)
+    assert status == 0
     assert not mutated
 
 
@@ -121,10 +122,9 @@ def test_group_apply_once_per_group():
         names.append(group.name)
         return group
     names.clear()
-    # this takes the slow apply path, i.e. we need to apply the
-    # function to the first row twice
+    # this takes the slow apply path
     df.groupby("a").apply(f_nocopy)
-    assert names == [0, 0, 1, 2]
+    assert names == [0, 1, 2]
 
 
 def test_apply_with_mixed_dtype():
