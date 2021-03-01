@@ -343,6 +343,7 @@ class CategoricalDtype(PandasExtensionDtype, ExtensionDtype):
 
         self._categories = categories
         self._ordered = ordered
+        self._hash = None
 
     def __setstate__(self, state: MutableMapping[str_type, Any]) -> None:
         # for pickle compat. __get_state__ is defined in the
@@ -352,6 +353,8 @@ class CategoricalDtype(PandasExtensionDtype, ExtensionDtype):
         self._ordered = state.pop("ordered", False)
 
     def __hash__(self) -> int:
+        if self._hash:
+            return self._hash
         # _hash_categories returns a uint64, so use the negative
         # space for when we have unknown categories to avoid a conflict
         if self.categories is None:
@@ -360,7 +363,8 @@ class CategoricalDtype(PandasExtensionDtype, ExtensionDtype):
             else:
                 return -2
         # We *do* want to include the real self.ordered here
-        return int(self._hash_categories(self.categories, self.ordered))
+        self._hash = int(self._hash_categories(self.categories, self.ordered))
+        return self._hash
 
     def __eq__(self, other: Any) -> bool:
         """
