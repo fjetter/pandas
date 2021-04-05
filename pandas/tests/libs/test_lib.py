@@ -4,6 +4,7 @@ import pytest
 from pandas._libs import (
     Timestamp,
     lib,
+    properties,
     writers as libwriters,
 )
 
@@ -212,3 +213,48 @@ def test_no_default_pickle():
     # GH#40397
     obj = tm.round_trip_pickle(lib.no_default)
     assert obj is lib.no_default
+
+
+def test_cache_readonly_no_global_cache():
+    """
+    Ensure that the definition of a global attribute `_cache` does not interfere with
+    """
+
+    from typing import Dict
+
+    # Just declaring the type is sufficient for the attribute to be considered global
+    class MyDtypeGlobalAttr:
+        _cache: Dict
+
+        def __init__(self, value):
+            self._value = value
+            self._cache = {}
+
+        @properties.cache_readonly
+        def cached_attr(self):
+            return self._value
+
+    a = MyDtypeGlobalAttr("A")
+    with pytest.raises(TypeError, match=r"Class \w* defines a `_cache` " r"attribute"):
+        a.cached_attr
+
+    class MyDtypeInstanceAttr:
+        def __init__(self, value):
+            self._value = value
+            self._cache = {}
+
+        @properties.cache_readonly
+        def cached_attr(self):
+            return self._value
+
+    a = MyDtypeInstanceAttr("A")
+    b = MyDtypeInstanceAttr("B")
+    b._cache = {}
+
+    # Assert our assumption that the property cache actually uses an attribute called _cache
+    assert len(a._cache) == 0
+
+    assert a.cached_attr == "A"
+    assert b.cached_attr == "B"
+
+    assert len(a._cache) == 1
