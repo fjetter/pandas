@@ -895,13 +895,6 @@ cdef class Tick(SingleConstructorOffset):
 
         raise ApplyTypeError(f"Unhandled type: {type(other).__name__}")
 
-    # --------------------------------------------------------------------
-    # Pickle Methods
-
-    def __setstate__(self, state):
-        self.n = state["n"]
-        self.normalize = False
-
 
 cdef class Day(Tick):
     _nanos_inc = 24 * 3600 * 1_000_000_000
@@ -2005,11 +1998,6 @@ cdef class QuarterOffset(SingleConstructorOffset):
             startingMonth = self._default_starting_month
         self.startingMonth = startingMonth
 
-    cpdef __setstate__(self, state):
-        self.startingMonth = state.pop("startingMonth")
-        self.n = state.pop("n")
-        self.normalize = state.pop("normalize")
-
     @classmethod
     def _from_name(cls, suffix=None):
         kwargs = {}
@@ -2264,11 +2252,6 @@ cdef class SemiMonthOffset(SingleConstructorOffset):
                 f"{self._min_day_of_month}<=day_of_month<=27, "
                 f"got {self.day_of_month}"
             )
-
-    cpdef __setstate__(self, state):
-        self.n = state.pop("n")
-        self.normalize = state.pop("normalize")
-        self.day_of_month = state.pop("day_of_month")
 
     @classmethod
     def _from_name(cls, suffix=None):
@@ -2587,12 +2570,6 @@ cdef class WeekOfMonth(WeekOfMonthMixin):
         if self.week < 0 or self.week > 3:
             raise ValueError(f"Week must be 0<=week<=3, got {self.week}")
 
-    cpdef __setstate__(self, state):
-        self.n = state.pop("n")
-        self.normalize = state.pop("normalize")
-        self.weekday = state.pop("weekday")
-        self.week = state.pop("week")
-
     def _get_offset_day(self, other: datetime) -> int:
         """
         Find the day in the same month as other that has the same
@@ -2652,12 +2629,6 @@ cdef class LastWeekOfMonth(WeekOfMonthMixin):
         if self.n == 0:
             raise ValueError("N cannot be 0")
 
-    cpdef __setstate__(self, state):
-        self.n = state.pop("n")
-        self.normalize = state.pop("normalize")
-        self.weekday = state.pop("weekday")
-        self.week = -1
-
     def _get_offset_day(self, other: datetime) -> int:
         """
         Find the day in the same month as other that has the same
@@ -2708,12 +2679,6 @@ cdef class FY5253Mixin(SingleConstructorOffset):
 
         if self.variation not in ["nearest", "last"]:
             raise ValueError(f"{self.variation} is not a valid variation")
-
-    cpdef __setstate__(self, state):
-        self.n = state.pop("n")
-        self.normalize = state.pop("normalize")
-        self.weekday = state.pop("weekday")
-        self.variation = state.pop("variation")
 
     def is_anchored(self) -> bool:
         return (
@@ -2995,10 +2960,6 @@ cdef class FY5253Quarter(FY5253Mixin):
         )
         self.qtr_with_extra_week = qtr_with_extra_week
 
-    cpdef __setstate__(self, state):
-        FY5253Mixin.__setstate__(self, state)
-        self.qtr_with_extra_week = state.pop("qtr_with_extra_week")
-
     @cache_readonly
     def _offset(self):
         return FY5253(
@@ -3140,10 +3101,6 @@ cdef class Easter(SingleConstructorOffset):
 
     Right now uses the revised method which is valid in years 1583-4099.
     """
-
-    cpdef __setstate__(self, state):
-        self.n = state.pop("n")
-        self.normalize = state.pop("normalize")
 
     @apply_wraps
     def apply(self, other: datetime) -> datetime:

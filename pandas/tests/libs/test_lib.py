@@ -217,25 +217,24 @@ def test_no_default_pickle():
 
 def test_cache_readonly_no_global_cache():
     """
-    Ensure that the definition of a global attribute `_cache` does not interfere with
+    Ensure that the definition of a global attribute `_cache` does
+    not interfere with the property cache
     """
 
     from typing import Dict
 
-    # Just declaring the type is sufficient for the attribute to be considered global
     class MyDtypeGlobalAttr:
-        _cache: Dict
+        _cache: Dict = {}
 
         def __init__(self, value):
             self._value = value
-            self._cache = {}
 
         @properties.cache_readonly
         def cached_attr(self):
             return self._value
 
     a = MyDtypeGlobalAttr("A")
-    with pytest.raises(TypeError, match=r"Class \w* defines a `_cache` " r"attribute"):
+    with pytest.raises(TypeError, match=r"defines a `_cache` attribute"):
         a.cached_attr
 
     class MyDtypeInstanceAttr:
@@ -251,7 +250,8 @@ def test_cache_readonly_no_global_cache():
     b = MyDtypeInstanceAttr("B")
     b._cache = {}
 
-    # Assert our assumption that the property cache actually uses an attribute called _cache
+    # Assert our assumption that the property cache
+    # actually uses an attribute called _cache
     assert len(a._cache) == 0
 
     assert a.cached_attr == "A"
